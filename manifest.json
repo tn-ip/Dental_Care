@@ -1,0 +1,18 @@
+{
+  "name": "DentalCare Adventure",
+  "short_name": "DentalCare",
+  "description": "Learn dental health through a fun platformer adventure!",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "images/app_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
