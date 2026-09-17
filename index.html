@@ -351,72 +351,136 @@ function generateLevel() {
     function setTile(c,r,v) { if(c>=0&&c<WORLD_COLS&&r>=0&&r<WORLD_ROWS) tileMap[r][c]=v; }
     function fillRect(c,r,w,h,v) { for(let i=0;i<w;i++)for(let j=0;j<h;j++) setTile(c+i,r+j,v); }
 
-    const g = GROUND_ROW;
-
-    // Segments of ground with gaps
-    const segs = [
-        { start:0, end:35 }, { start:38, end:65 }, { start:68, end:100 },
-        { start:103, end:140 }, { start:143, end:175 }, { start:178, end:220 },
-        { start:223, end:249 }
-    ];
-    segs.forEach(s => {
-        for(let c=s.start; c<=s.end; c++) {
+    function placeGround(start, end) {
+        for (let c=start; c<=end; c++) {
             setTile(c,g,'stone_block_top');
             fillRect(c,g+1,1,3,'stone_block_center');
             setTile(c,g+4,'stone_block_bottom');
         }
-        setTile(s.start,g,'stone_block_top_left');
-        setTile(s.end,g,'stone_block_top_right');
-        setTile(s.start,g+4,'stone_block_bottom_left');
-        setTile(s.end,g+4,'stone_block_bottom_right');
-    });
+        setTile(start,g,'stone_block_top_left');
+        setTile(end,g,'stone_block_top_right');
+        setTile(start,g+4,'stone_block_bottom_left');
+        setTile(end,g+4,'stone_block_bottom_right');
+    }
 
-    // Floating platforms
-    const platY = g - 3;
-    const plats = [
-        [15,4],[22,3],[30,5],[42,3],[48,4],[55,3],[62,4],
-        [72,3],[80,5],[88,3],[95,4],[108,3],[115,5],[122,3],
-        [130,4],[138,3],[148,5],[155,3],[162,4],[170,3],
-        [182,4],[190,3],[198,5],[205,3],[212,4],[220,3],[228,5],[235,3],[242,4]
+    function placePlatform(c, r, w) {
+        if (w < 1) return;
+        if (w === 1) { setTile(c, r, 'stone_horizontal_middle'); return; }
+        setTile(c, r, 'stone_horizontal_left');
+        for (let i=1; i<w-1; i++) setTile(c+i, r, 'stone_horizontal_middle');
+        setTile(c+w-1, r, 'stone_horizontal_right');
+    }
+
+    const g = GROUND_ROW;
+    const LOW = g-2, MID = g-3, MID2 = g-4, HIGH = g-5, TOP = g-6;
+
+    // Ground path: easy opening, then mixed 2 / 4–5 / 6–7 gaps.
+    // Walk speed 3.5 (air 3.15) and jump ~4.5 tiles: a clean jump clears 2–4;
+    // 5 needs a committed edge jump; 6–7 get a stepping stone so they stay
+    // fair without shop items (double-jump can still skip the 6-tile pit).
+    const groundSegs = [
+        [0, 28],    // easy start — shop + first enemies
+        [31, 48],   // after easy gap 2
+        [51, 64],   // after easy gap 2 (covers far enemy patrol)
+        [69, 77],   // recovery after medium gap 4
+        [80, 94],
+        [99, 104],  // recovery after medium gap 4
+        [107, 118],
+        [125, 133], // recovery after stretch gap 6
+        [136, 148],
+        [154, 160], // recovery after medium gap 5
+        [163, 174],
+        [182, 190], // recovery after stretch gap 7
+        [193, 208],
+        [213, 218], // recovery after medium gap 4
+        [221, 249],
     ];
-    plats.forEach(([c,w]) => {
-        setTile(c,platY,'stone_horizontal_left');
-        for(let i=1; i<w-1; i++) setTile(c+i,platY,'stone_horizontal_middle');
-        setTile(c+w-1,platY,'stone_horizontal_right');
-    });
+    groundSegs.forEach(([a,b]) => placeGround(a,b));
 
-    // High platforms
-    const highY = g - 6;
-    const highs = [[20,3],[50,3],[85,3],[120,3],[160,3],[195,3],[230,3]];
-    highs.forEach(([c,w]) => {
-        setTile(c,highY,'stone_horizontal_left');
-        for(let i=1; i<w-1; i++) setTile(c+i,highY,'stone_horizontal_middle');
-        setTile(c+w-1,highY,'stone_horizontal_right');
-    });
+    // Multi-height parkour: staggered low/mid/high, thin (2–3) + rest (4–5).
+    // High route is optional (flags). Medium ground gaps stay clear of low stones.
+    const plats = [
+        // Tutorial climb to Tip 1
+        [14, 4, LOW],
+        [18, 3, MID2],
+        [20, 3, TOP],   // flag 1 @ col 21
+        [24, 5, MID],
 
-    // Overhang platforms
-    const overY = g - 1;
-    const overs = [[10,2],[40,2],[75,2],[110,2],[150,2],[185,2],[225,2]];
+        // Stepping-stone run over safe ground
+        [38, 2, LOW],
+        [42, 2, MID2],
+        [46, 3, MID],
+        [50, 2, HIGH],
+        [53, 4, TOP],   // flag 2 @ col 54
+        [58, 5, MID],
+
+        // Staggered islands (4-tile pit at 65–68 stays a ground jump)
+        [72, 3, LOW],
+        [76, 2, MID2],
+        [81, 4, MID],
+        [86, 2, HIGH],
+        [90, 3, MID2],
+        [100, 5, MID],
+
+        // Climb to Tip 3, then stone in the 6-tile pit
+        [108, 4, LOW],
+        [113, 3, MID2],
+        [117, 2, HIGH],
+        [120, 4, TOP],  // flag 3 @ col 121 (high route bridges the pit)
+        [121, 2, LOW],  // stretch stepping stone
+        [126, 5, MID],
+
+        // Thin islands around the 5-tile committed jump
+        [138, 2, LOW],
+        [142, 2, MID],
+        [146, 3, MID2],
+        [155, 2, HIGH],
+        [157, 3, MID],
+
+        // Approach + staggered stones across the 7-tile pit
+        [166, 3, LOW],
+        [170, 2, MID2],
+        [176, 2, LOW],  // first stone (air on both sides)
+        [179, 2, MID],  // second stone, staggered height
+        [184, 4, MID2],
+
+        // Climb to Tip 4 and late-course variety
+        [188, 3, LOW],
+        [192, 2, MID2],
+        [195, 5, TOP],  // flag 4 @ col 196
+        [202, 3, MID],
+        [206, 2, HIGH],
+        [213, 4, MID2],
+        [216, 3, LOW],
+        [222, 2, MID],
+        [226, 3, HIGH],
+        [230, 5, MID2],
+        [236, 2, LOW],
+        [240, 3, MID],
+        [245, 4, MID2],
+    ];
+    plats.forEach(([c,w,r]) => placePlatform(c, r, w));
+
+    // Overhang lips — hop-ons, kept off gap edges, recovery ledges, and the shop
+    const overs = [[8,2],[44,2],[88,2],[164,2],[200,2],[234,2]];
     overs.forEach(([c,w]) => {
-        setTile(c,overY,'stone_horizontal_overhang_left');
-        if(w>1) { for(let i=1;i<w;i++) setTile(c+i,overY,'stone_horizontal_overhang_right'); }
+        setTile(c, g-1, 'stone_horizontal_overhang_left');
+        if (w>1) { for (let i=1;i<w;i++) setTile(c+i, g-1, 'stone_horizontal_overhang_right'); }
     });
 
-    // Shop at start
     shopDoor.x = 80;
     shopDoor.y = (GROUND_ROW-2)*TILE;
-    // Flags on the highest platforms (row g-6)
-    const highFlagRows = [
-        { col:21, color:'red', url:'https://www.toothclub.gov.hk/en/en_home_01_01_03.html' },
-        { col:51, color:'blue', url:'https://jcsohp.org/how-to-brush-your-teeth-correctly/' },
-        { col:121, color:'green', url:'https://www.bioniq-oralcare.com/zh-hk/dental-health/teeth/tooth-structure' },
-        { col:196, color:'yellow', url:'https://youtu.be/x2W2YAEVtiM?si=gyHddMLuDsA2cWGL' },
+
+    const highFlags = [
+        { col:21,  row:TOP, color:'red',    url:'https://www.toothclub.gov.hk/en/en_home_01_01_03.html' },
+        { col:54,  row:TOP, color:'blue',   url:'https://jcsohp.org/how-to-brush-your-teeth-correctly/' },
+        { col:121, row:TOP, color:'green',  url:'https://www.bioniq-oralcare.com/zh-hk/dental-health/teeth/tooth-structure' },
+        { col:196, row:TOP, color:'yellow', url:'https://youtu.be/x2W2YAEVtiM?si=gyHddMLuDsA2cWGL' },
     ];
-    flags = highFlagRows.map(f => ({
+    flags = highFlags.map(f => ({
         color: f.color, url: f.url, col: f.col,
-        y: (g-6) * TILE - 36 // sits exactly on top of the high platform tile
+        y: f.row * TILE - 36
     }));
-    // Collectibles
     spawnCollectibles();
 }
 
@@ -424,18 +488,14 @@ function getTile(c,r) { if(c>=0&&c<WORLD_COLS&&r>=0&&r<WORLD_ROWS) return tileMa
 function isSolidTile(c,r) { const t=getTile(c,r); return t && !t.includes('cloud') && !t.includes('overhang'); }
 
 function getRandomSurfaceTiles(count) {
-    const surfaceRow = GROUND_ROW;
-    const surfRows = [surfaceRow, GROUND_ROW-3, GROUND_ROW-6]; // ground, plat, high
     const spots = [];
-    surfRows.forEach(row => {
+    for (let row=1; row<WORLD_ROWS; row++) {
         for (let c=0; c<WORLD_COLS; c++) {
-            if (isSolidTile(c,row)) {
-                // Must have an empty tile above (so collectible can sit on top)
-                if (!getTile(c,row-1) && !getTile(c,row-2)) spots.push({col:c, row});
+            if (isSolidTile(c,row) && !getTile(c,row-1) && !getTile(c,row-2)) {
+                spots.push({col:c, row});
             }
         }
-    });
-    // Shuffle and pick
+    }
     const shuffled = spots.sort(()=>Math.random()-0.5);
     return shuffled.slice(0, count);
 }
