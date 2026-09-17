@@ -39,7 +39,21 @@
         .cal-day.brushed { background:#4ecdc4; color:white; font-weight:bold; }
         .cal-day.active.brushed { background:#1e8449; }
         .cal-brush { display:block; font-size:10px; line-height:1.1; }
-        #calendar-streak, #brush-streak-label { color:#1e8449; font-weight:bold; margin:6px 0; }
+        #calendar-streak, #brush-streak-label, #collection-progress { color:#1e8449; font-weight:bold; margin:6px 0; }
+        #collection-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:12px; }
+        .award-slot { background:#eee; border-radius:10px; padding:12px 8px; border:2px solid transparent; min-height:118px; }
+        .award-slot.unlocked { background:#d5f5e3; border-color:#27ae60; }
+        .award-slot.locked { background:#e8e8e8; color:#9a9a9a; }
+        .award-icon { font-size:36px; display:block; line-height:1.2; }
+        .award-slot.locked .award-icon { filter:grayscale(1); opacity:0.32; }
+        .award-name { font-weight:bold; font-size:13px; margin:4px 0 2px; color:#333; }
+        .award-slot.locked .award-name { color:#9a9a9a; }
+        .award-how { font-size:11px; color:#555; line-height:1.3; }
+        .award-slot.locked .award-how { color:#b0b0b0; }
+        #award-modal { z-index:110; }
+        #award-unlock-list { margin:10px 0; }
+        .award-unlock-item { margin:10px 0; padding:10px; background:#d5f5e3; border-radius:10px; border:2px solid #27ae60; }
+        .award-unlock-item .award-icon { font-size:44px; }
         #timer-display { font-size:40px; color:#e74c3c; font-weight:bold; }
         #timer-instruction { font-size:18px; color:#555; margin-bottom:10px; min-height:40px; }
         #brushing-guide-img { max-width:100%; height:auto; border-radius:10px; border:2px solid #ccc; margin-bottom:15px; display:block; margin:0 auto 15px; }
@@ -71,6 +85,7 @@
         <button id="team-btn" class="btn" onclick="openTeam()">👥 Team</button>
         <button id="settings-btn" class="btn" onclick="openSettings()">⚙️</button>
         <button id="calendar-btn" class="btn" onclick="openCalendar()">📅</button>
+        <button id="collection-btn" class="btn" onclick="openCollection()">🏆</button>
     </div>
     <div id="mobile-controls">
         <div id="btn-jump" class="d-btn">▲</div>
@@ -95,6 +110,20 @@
     <p>Green = login days · 🦷 Teal = brushed</p>
     <div id="calendar-grid"></div>
     <br><button class="btn" onclick="closeModal('calendar-modal')">Close</button>
+</div>
+
+<div id="collection-modal" class="modal">
+    <h2>🏆 Collection 獎章冊</h2>
+    <p id="collection-progress">Unlocked 0 / 0 · 已解鎖 0 / 0</p>
+    <p>Collect awards by brushing every day!</p>
+    <div id="collection-grid"></div>
+    <br><button class="btn" onclick="closeModal('collection-modal')">Close</button>
+</div>
+
+<div id="award-modal" class="modal">
+    <h2>🏆 New award! 新獎章！</h2>
+    <div id="award-unlock-list"></div>
+    <br><button class="btn" onclick="closeModal('award-modal')">Awesome!</button>
 </div>
 
 <div id="shop-modal" class="modal">
@@ -246,7 +275,13 @@ let userData = {
     lastBrush: localStorage.getItem('dental_brush_last') || null,
     brushHistory: JSON.parse(localStorage.getItem('dental_brush_history')) || [],
     brushStreak: parseInt(localStorage.getItem('dental_brush_streak'), 10) || 0,
+    awards: JSON.parse(localStorage.getItem('dental_awards')) || [],
+    brushCount: parseInt(localStorage.getItem('dental_brush_count'), 10) || 0,
 };
+if (!Array.isArray(userData.awards)) userData.awards = [];
+if (!localStorage.getItem('dental_brush_count') && userData.brushHistory.length) {
+    userData.brushCount = userData.brushHistory.length;
+}
 
 let player = { x:180, y:0, w:40, h:40, vx:0, vy:0, dir:1, grounded:false, frame:0, frameTimer:0, isMoving:false, canJump:true, jumpCount:0, maxJumps:1 };
 let camera = { x:0 };
@@ -298,6 +333,8 @@ function saveData() {
     localStorage.setItem('dental_brush_last', userData.lastBrush || '');
     localStorage.setItem('dental_brush_history', JSON.stringify(userData.brushHistory));
     localStorage.setItem('dental_brush_streak', userData.brushStreak);
+    localStorage.setItem('dental_awards', JSON.stringify(userData.awards || []));
+    localStorage.setItem('dental_brush_count', userData.brushCount || 0);
 }
 
 // ==================== LEVEL GENERATION ====================
@@ -1135,7 +1172,7 @@ function claimDailyBrush() {
     syncBrushStreak();
     const today = todayDateString();
     if (userData.lastBrush === today) {
-        return { claimed:false, message:'Already claimed today' };
+        return { claimed:false, newAwards:[], message:'Already claimed today' };
     }
     userData.coins += 100;
     if (userData.lastBrush === yesterdayDateString()) {
@@ -1145,14 +1182,69 @@ function claimDailyBrush() {
     }
     userData.lastBrush = today;
     if (!userData.brushHistory.includes(today)) userData.brushHistory.push(today);
+    userData.brushCount = (userData.brushCount || 0) + 1;
     addXP(50);
+    const newAwards = unlockEligibleAwards();
     saveData();
     updateUI();
     return {
         claimed:true,
+        newAwards,
         message:`All done! Shiny Smile! +100 Coins, +50 XP — Day ${userData.brushStreak} streak!`
     };
 }
+
+// ==================== COLLECTION AWARDS ====================
+const AWARD_DEFS = [
+    { id:'first_brush', name:'First Brush', icon:'🪥', how:'Complete 1 successful daily brush claim · 完成第一次每日刷牙領獎', met: d => (d.brushCount || 0) >= 1 },
+    { id:'streak_3', name:'3-Day Streak', icon:'🔥', how:'Brush streak reaches 3 · 連續刷牙 3 天', met: d => (d.brushStreak || 0) >= 3 },
+    { id:'streak_7', name:'7-Day Streak', icon:'⭐', how:'Brush streak reaches 7 · 連續刷牙 7 天', met: d => (d.brushStreak || 0) >= 7 },
+    { id:'streak_14', name:'Two Weeks', icon:'💪', how:'Brush streak reaches 14 · 連續刷牙 14 天', met: d => (d.brushStreak || 0) >= 14 },
+    { id:'streak_30', name:'Month of Care', icon:'🏅', how:'Brush streak reaches 30 · 連續刷牙 30 天', met: d => (d.brushStreak || 0) >= 30 },
+    { id:'brushes_10', name:'Habit Starter', icon:'🌱', how:'10 lifetime successful daily claims · 累積 10 次每日刷牙領獎', met: d => (d.brushCount || 0) >= 10 },
+    { id:'brushes_30', name:'Habit Builder', icon:'🌳', how:'30 lifetime successful daily claims · 累積 30 次每日刷牙領獎', met: d => (d.brushCount || 0) >= 30 },
+];
+
+function unlockEligibleAwards() {
+    if (!Array.isArray(userData.awards)) userData.awards = [];
+    const newly = [];
+    AWARD_DEFS.forEach(def => {
+        if (userData.awards.includes(def.id)) return;
+        if (def.met(userData)) {
+            userData.awards.push(def.id);
+            newly.push(def);
+        }
+    });
+    return newly;
+}
+
+function showAwardCelebration(awards) {
+    if (!awards || !awards.length) return;
+    const list = document.getElementById('award-unlock-list');
+    list.innerHTML = awards.map(a =>
+        `<div class="award-unlock-item"><span class="award-icon">${a.icon}</span><div class="award-name">${a.name}</div></div>`
+    ).join('');
+    document.getElementById('award-modal').style.display = 'block';
+}
+
+window.openCollection = function() {
+    const unlocked = new Set(userData.awards || []);
+    const n = AWARD_DEFS.filter(a => unlocked.has(a.id)).length;
+    const y = AWARD_DEFS.length;
+    document.getElementById('collection-progress').innerText = `Unlocked ${n} / ${y} · 已解鎖 ${n} / ${y}`;
+    const grid = document.getElementById('collection-grid');
+    grid.innerHTML = '';
+    AWARD_DEFS.forEach(def => {
+        const isOn = unlocked.has(def.id);
+        const slot = document.createElement('div');
+        slot.className = 'award-slot ' + (isOn ? 'unlocked' : 'locked');
+        slot.innerHTML = isOn
+            ? `<span class="award-icon">${def.icon}</span><div class="award-name">${def.name}</div><div class="award-how">${def.how}</div>`
+            : `<span class="award-icon">${def.icon}</span><div class="award-name">🔒 ${def.name}</div><div class="award-how">Locked · 未解鎖</div>`;
+        grid.appendChild(slot);
+    });
+    document.getElementById('collection-modal').style.display = 'block';
+};
 
 // ==================== BRUSHING TIMER ====================
 let brushInterval;
@@ -1177,6 +1269,9 @@ window.finishBrushing = function() {
     document.getElementById('timer-instruction').innerText = result.message;
     document.getElementById('timer-display').innerText = '00:00';
     updateBrushStatusUI();
+    if (result.claimed && result.newAwards && result.newAwards.length) {
+        showAwardCelebration(result.newAwards);
+    }
     setTimeout(() => {
         closeModal('timer-modal');
         stopBrushing();
@@ -1521,6 +1616,7 @@ function startGame() {
     checkDailyLogin();
     syncBrushStreak();
     updateBrushStatusUI();
+    if (unlockEligibleAwards().length) saveData();
     updateUI();
     updateEnemyCount();
     // Init pet position
