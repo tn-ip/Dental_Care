@@ -34,8 +34,12 @@
         .list-item.active { border:2px solid #27ae60; background:#d5f5e3; }
         .emoji-icon { font-size:24px; margin-right:10px; }
         #calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:15px; }
-        .cal-day { padding:8px 2px; background:#f0f0f0; border-radius:5px; font-size:12px; }
+        .cal-day { padding:8px 2px; background:#f0f0f0; border-radius:5px; font-size:12px; min-height:36px; }
         .cal-day.active { background:#27ae60; color:white; font-weight:bold; }
+        .cal-day.brushed { background:#4ecdc4; color:white; font-weight:bold; }
+        .cal-day.active.brushed { background:#1e8449; }
+        .cal-brush { display:block; font-size:10px; line-height:1.1; }
+        #calendar-streak, #brush-streak-label { color:#1e8449; font-weight:bold; margin:6px 0; }
         #timer-display { font-size:40px; color:#e74c3c; font-weight:bold; }
         #timer-instruction { font-size:18px; color:#555; margin-bottom:10px; min-height:40px; }
         #brushing-guide-img { max-width:100%; height:auto; border-radius:10px; border:2px solid #ccc; margin-bottom:15px; display:block; margin:0 auto 15px; }
@@ -87,7 +91,8 @@
 
 <div id="calendar-modal" class="modal">
     <h2>📅 Login History</h2>
-    <p>Green days are active days!</p>
+    <p id="calendar-streak">🦷 Brush streak: 0</p>
+    <p>Green = login days · 🦷 Teal = brushed</p>
     <div id="calendar-grid"></div>
     <br><button class="btn" onclick="closeModal('calendar-modal')">Close</button>
 </div>
@@ -136,6 +141,7 @@
 
 <div id="timer-modal" class="modal">
     <h2>🦷 Brushing Time</h2>
+    <p id="brush-streak-label">No streak yet · Brush to start Day 1!</p>
     <div id="timer-display">02:00</div>
     <img id="brushing-guide-img" src="images/brushing_guide.png" alt="Brushing Guide">
     <div id="timer-instruction">Get your toothbrush ready...</div>
@@ -237,6 +243,9 @@ let userData = {
     activeTeammates: JSON.parse(localStorage.getItem('dental_active_teammates')) || [],
     petEnabled: localStorage.getItem('dental_pet') !== 'false',
     defeatedEnemies: JSON.parse(localStorage.getItem('dental_defeated')) || {},
+    lastBrush: localStorage.getItem('dental_brush_last') || null,
+    brushHistory: JSON.parse(localStorage.getItem('dental_brush_history')) || [],
+    brushStreak: parseInt(localStorage.getItem('dental_brush_streak'), 10) || 0,
 };
 
 let player = { x:180, y:0, w:40, h:40, vx:0, vy:0, dir:1, grounded:false, frame:0, frameTimer:0, isMoving:false, canJump:true, jumpCount:0, maxJumps:1 };
@@ -286,6 +295,9 @@ function saveData() {
     localStorage.setItem('dental_active_teammates', JSON.stringify(userData.activeTeammates));
     localStorage.setItem('dental_pet', userData.petEnabled);
     localStorage.setItem('dental_defeated', JSON.stringify(userData.defeatedEnemies));
+    localStorage.setItem('dental_brush_last', userData.lastBrush || '');
+    localStorage.setItem('dental_brush_history', JSON.stringify(userData.brushHistory));
+    localStorage.setItem('dental_brush_streak', userData.brushStreak);
 }
 
 // ==================== LEVEL GENERATION ====================
@@ -1044,8 +1056,18 @@ window.togglePet = function() {
     saveData();
 };
 
+function dateMatchesMonthDay(dateStr, dayNum, monthDate) {
+    const o = new Date(dateStr);
+    return o.getDate()===dayNum && o.getMonth()===monthDate.getMonth() && o.getFullYear()===monthDate.getFullYear();
+}
+
 // ==================== CALENDAR ====================
 window.openCalendar = function() {
+    syncBrushStreak();
+    const n = userData.brushStreak || 0;
+    document.getElementById('calendar-streak').innerText = n > 0
+        ? `🦷 Brush streak: Day ${n}`
+        : '🦷 Brush streak: 0';
     const grid = document.getElementById('calendar-grid');
     grid.innerHTML = '';
     const today = new Date();
@@ -1053,12 +1075,11 @@ window.openCalendar = function() {
     for (let i=1; i<=daysInMonth; i++) {
         const dayDiv = document.createElement('div');
         dayDiv.className = 'cal-day';
-        dayDiv.innerText = i;
-        const isLogged = userData.loginHistory.some(d => {
-           const o = new Date(d);
-           return o.getDate()===i && o.getMonth()===today.getMonth();
-        });
+        const isLogged = userData.loginHistory.some(d => dateMatchesMonthDay(d, i, today));
+        const isBrushed = userData.brushHistory.some(d => dateMatchesMonthDay(d, i, today));
         if (isLogged) dayDiv.classList.add('active');
+        if (isBrushed) dayDiv.classList.add('brushed');
+        dayDiv.innerHTML = isBrushed ? `${i}<span class="cal-brush">🦷</span>` : String(i);
         grid.appendChild(dayDiv);
     }
     document.getElementById('calendar-modal').style.display = 'block';
@@ -1078,13 +1099,93 @@ function checkDailyLogin() {
     }
 }
 
+// ==================== DAILY BRUSH CLAIM ====================
+function todayDateString() { return new Date().toDateString(); }
+function yesterdayDateString() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toDateString();
+}
+function hasClaimedBrushToday() { return userData.lastBrush === todayDateString(); }
+
+function syncBrushStreak() {
+    const last = userData.lastBrush;
+    if (last && last !== todayDateString() && last !== yesterdayDateString()) {
+        if (userData.brushStreak !== 0) {
+            userData.brushStreak = 0;
+            saveData();
+        }
+    }
+}
+
+function updateBrushStatusUI() {
+    const streakEl = document.getElementById('brush-streak-label');
+    if (!streakEl) return;
+    const n = userData.brushStreak || 0;
+    if (hasClaimedBrushToday()) {
+        streakEl.innerText = `Day ${n} streak! · Already claimed today`;
+    } else if (n > 0) {
+        streakEl.innerText = `Day ${n} streak · Claim today's brush!`;
+    } else {
+        streakEl.innerText = 'No streak yet · Brush to start Day 1!';
+    }
+}
+
+function claimDailyBrush() {
+    syncBrushStreak();
+    const today = todayDateString();
+    if (userData.lastBrush === today) {
+        return { claimed:false, message:'Already claimed today' };
+    }
+    userData.coins += 100;
+    if (userData.lastBrush === yesterdayDateString()) {
+        userData.brushStreak += 1;
+    } else {
+        userData.brushStreak = 1;
+    }
+    userData.lastBrush = today;
+    if (!userData.brushHistory.includes(today)) userData.brushHistory.push(today);
+    addXP(50);
+    saveData();
+    updateUI();
+    return {
+        claimed:true,
+        message:`All done! Shiny Smile! +100 Coins, +50 XP — Day ${userData.brushStreak} streak!`
+    };
+}
+
 // ==================== BRUSHING TIMER ====================
 let brushInterval;
 document.getElementById('brush-btn').addEventListener('click', () => {
+    syncBrushStreak();
+    updateBrushStatusUI();
+    const instruct = document.getElementById('timer-instruction');
+    if (document.getElementById('start-timer-btn').style.display !== 'none') {
+        instruct.innerText = hasClaimedBrushToday()
+            ? 'Already claimed today — practice anytime!'
+            : 'Get your toothbrush ready...';
+    }
     document.getElementById('timer-modal').style.display = 'block';
 });
 
+let brushSessionDone = false;
+window.finishBrushing = function() {
+    if (brushSessionDone) return;
+    brushSessionDone = true;
+    clearInterval(brushInterval);
+    const result = claimDailyBrush();
+    document.getElementById('timer-instruction').innerText = result.message;
+    document.getElementById('timer-display').innerText = '00:00';
+    updateBrushStatusUI();
+    setTimeout(() => {
+        closeModal('timer-modal');
+        stopBrushing();
+    }, 3000);
+};
+
 window.startBrushing = function() {
+    clearInterval(brushInterval);
+    brushSessionDone = false;
     document.getElementById('start-timer-btn').style.display = 'none';
     let timeLeft = 120;
     const display = document.getElementById('timer-display');
@@ -1100,15 +1201,7 @@ window.startBrushing = function() {
         else if (timeLeft>20) instruct.innerText = "20秒時間內，下排牙齒咬合面，每兩顆一起刷";
         else if (timeLeft>0) instruct.innerText = "20秒時間內，下排牙齒外側，每兩顆一起刷";
         else instruct.innerText = "Don't forget your tongue!";
-        if (timeLeft<=0) {
-            clearInterval(brushInterval);
-            instruct.innerText = "All done! Shiny Smile! +100 Coins, +50 XP";
-            userData.coins += 100;
-            addXP(50);
-            saveData();
-            updateUI();
-            setTimeout(() => closeModal('timer-modal'), 3000);
-        }
+        if (timeLeft<=0) finishBrushing();
     }, 1000);
 };
 
@@ -1116,7 +1209,10 @@ window.stopBrushing = function() {
     clearInterval(brushInterval);
     document.getElementById('start-timer-btn').style.display = 'inline-block';
     document.getElementById('timer-display').innerText = "02:00";
-    document.getElementById('timer-instruction').innerText = "Get Ready...";
+    document.getElementById('timer-instruction').innerText = hasClaimedBrushToday()
+        ? "Already claimed today — practice anytime!"
+        : "Get your toothbrush ready...";
+    updateBrushStatusUI();
 };
 
 window.closeModal = function(id) {
@@ -1423,6 +1519,8 @@ function startGame() {
     spawnDailyEnemies();
     updateTeammates();
     checkDailyLogin();
+    syncBrushStreak();
+    updateBrushStatusUI();
     updateUI();
     updateEnemyCount();
     // Init pet position
