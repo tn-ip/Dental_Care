@@ -20,13 +20,14 @@
         .btn { pointer-events:auto; background:#fff; border:3px solid #4a4a4a; border-radius:10px; padding:8px 12px; font-weight:bold; cursor:pointer; box-shadow:0 4px #000; font-size:13px; }
         .btn:active { box-shadow:0 1px #000; transform:translateY(3px); }
         #top-menu { position:absolute; top:10px; left:10px; display:flex; gap:8px; flex-wrap:wrap; max-width:75%; padding-top:calc(10px + env(safe-area-inset-top,0px)); padding-left:env(safe-area-inset-left,0px); }
-        #mobile-controls { position:absolute; bottom:calc(15px + env(safe-area-inset-bottom,0px)); left:calc(15px + env(safe-area-inset-left,0px)); pointer-events:auto; display:grid; grid-template-columns:60px 60px 60px; grid-template-rows:60px 60px; gap:4px; touch-action:none; }
-        .d-btn { width:60px; height:60px; background:rgba(255,255,255,0.25); border-radius:10px; border:2px solid rgba(255,255,255,0.4); touch-action:none; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.8); font-size:28px; }
+        #mobile-controls { position:absolute; bottom:calc(20px + env(safe-area-inset-bottom,0px)); left:calc(15px + env(safe-area-inset-left,0px)); pointer-events:auto; display:flex; gap:8px; touch-action:none; }
+        .d-btn { width:72px; height:72px; background:rgba(255,255,255,0.25); border-radius:12px; border:2px solid rgba(255,255,255,0.4); touch-action:none; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.8); font-size:28px; }
         .d-btn:active, .d-btn.held { background:rgba(255,255,255,0.5); }
-        #btn-jump { grid-column:2; grid-row:1; }
-        #btn-left { grid-column:1; grid-row:2; }
-        #btn-right { grid-column:3; grid-row:2; }
-        #action-btn { position:absolute; bottom:calc(25px + env(safe-area-inset-bottom,0px)); right:calc(25px + env(safe-area-inset-right,0px)); width:80px; height:80px; background:rgba(255,200,0,0.45); border-radius:50%; border:3px solid white; pointer-events:auto; display:flex; justify-content:center; align-items:center; font-weight:bold; color:white; font-size:13px; user-select:none; touch-action:none; }
+        #mobile-actions { position:absolute; bottom:calc(20px + env(safe-area-inset-bottom,0px)); right:calc(20px + env(safe-area-inset-right,0px)); pointer-events:none; display:flex; flex-direction:row; align-items:flex-end; gap:12px; touch-action:none; }
+        #btn-jump, #action-btn { pointer-events:auto; width:80px; height:80px; border-radius:50%; border:3px solid white; display:flex; justify-content:center; align-items:center; font-weight:bold; color:white; font-size:14px; user-select:none; touch-action:none; text-align:center; line-height:1.1; }
+        #btn-jump { background:rgba(78,205,196,0.5); }
+        #btn-jump:active, #btn-jump.held { background:rgba(78,205,196,0.85); }
+        #action-btn { background:rgba(255,200,0,0.45); font-size:13px; }
         #action-btn:active { background:rgba(255,200,0,0.8); }
         .modal { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border:5px solid #4a4a4a; border-radius:15px; padding:20px; width:85%; max-width:400px; max-height:85vh; max-height:85dvh; overflow-y:auto; text-align:center; display:none; pointer-events:auto; box-shadow:0 10px 50px rgba(0,0,0,0.5); z-index:100; touch-action:pan-y; }
         .modal h2 { margin-top:0; color:#333; }
@@ -77,6 +78,7 @@
         #rotate-overlay .rotate-sub { font-size:15px; font-weight:normal; color:#c8d0e0; }
         @media (hover:hover) and (pointer:fine) {
             #mobile-controls { display:none; }
+            #btn-jump { display:none; }
         }
     </style>
 </head>
@@ -99,11 +101,13 @@
         <button id="collection-btn" class="btn" onclick="openCollection()">🏆</button>
     </div>
     <div id="mobile-controls">
-        <div id="btn-jump" class="d-btn">▲</div>
-        <div id="btn-left" class="d-btn">◀</div>
-        <div id="btn-right" class="d-btn">▶</div>
+        <div id="btn-left" class="d-btn" role="button" aria-label="Move left">◀</div>
+        <div id="btn-right" class="d-btn" role="button" aria-label="Move right">▶</div>
     </div>
-    <div id="action-btn">INTERACT</div>
+    <div id="mobile-actions">
+        <div id="btn-jump" role="button" aria-label="Jump">JUMP</div>
+        <div id="action-btn" role="button" aria-label="Interact">INTERACT</div>
+    </div>
     <div id="enemy-count"></div>
 </div>
 
@@ -1832,6 +1836,7 @@ function bindHoldControl(el, key) {
 ['btn-jump','btn-left','btn-right'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
+    // Jump is the right-hand hold button (ArrowUp); left/right are the D-pad.
     const keyMap = { 'btn-jump':'ArrowUp', 'btn-left':'ArrowLeft', 'btn-right':'ArrowRight' };
     bindHoldControl(el, keyMap[id]);
 });
