@@ -10,25 +10,25 @@
     <link rel="icon" type="image/png" href="images/app_icon.png">
     <title>DentalCare Adventure</title>
     <style>
-        html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#1a1a2e; font-family:'Arial',sans-serif; touch-action:none; user-select:none; -webkit-user-select:none; }
-        canvas { display:block; width:100%; height:100%; image-rendering:pixelated; image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges; }
+        html, body { width:100%; height:100%; height:100dvh; margin:0; overflow:hidden; background:#1a1a2e; font-family:'Arial',sans-serif; touch-action:none; user-select:none; -webkit-user-select:none; position:fixed; inset:0; overscroll-behavior:none; }
+        canvas { display:block; position:absolute; top:0; left:0; width:100%; height:100%; image-rendering:pixelated; image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges; }
         #ui-layer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
-        .hud { position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.6); color:gold; padding:5px 15px; border-radius:20px; font-size:18px; font-weight:bold; display:flex; align-items:center; gap:8px; padding-top:env(safe-area-inset-top,0px); }
-        .hud-xp { position:absolute; top:50px; right:10px; background:rgba(0,0,0,0.6); color:#7ec8e3; padding:5px 12px; border-radius:12px; font-size:14px; font-weight:bold; display:flex; align-items:center; gap:5px; }
+        .hud { position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.6); color:gold; padding:5px 15px; border-radius:20px; font-size:18px; font-weight:bold; display:flex; align-items:center; gap:8px; padding-top:calc(5px + env(safe-area-inset-top,0px)); padding-right:calc(15px + env(safe-area-inset-right,0px)); }
+        .hud-xp { position:absolute; top:calc(50px + env(safe-area-inset-top,0px)); right:calc(10px + env(safe-area-inset-right,0px)); background:rgba(0,0,0,0.6); color:#7ec8e3; padding:5px 12px; border-radius:12px; font-size:14px; font-weight:bold; display:flex; align-items:center; gap:5px; }
         #xp-bar-wrap { width:120px; height:8px; background:#333; border-radius:4px; overflow:hidden; display:inline-block; }
         #xp-bar-fill { height:100%; width:0%; background:linear-gradient(90deg,#4ecdc4,#44e); border-radius:4px; transition:width 0.3s; }
         .btn { pointer-events:auto; background:#fff; border:3px solid #4a4a4a; border-radius:10px; padding:8px 12px; font-weight:bold; cursor:pointer; box-shadow:0 4px #000; font-size:13px; }
         .btn:active { box-shadow:0 1px #000; transform:translateY(3px); }
-        #top-menu { position:absolute; top:10px; left:10px; display:flex; gap:8px; flex-wrap:wrap; max-width:75%; padding-top:env(safe-area-inset-top,0px); }
-        #mobile-controls { position:absolute; bottom:15px; left:15px; pointer-events:auto; display:grid; grid-template-columns:60px 60px 60px; grid-template-rows:60px 60px; gap:4px; }
-        .d-btn { width:60px; height:60px; background:rgba(255,255,255,0.25); border-radius:10px; border:2px solid rgba(255,255,255,0.4); touch-action:manipulation; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.8); font-size:28px; }
-        .d-btn:active { background:rgba(255,255,255,0.5); }
+        #top-menu { position:absolute; top:10px; left:10px; display:flex; gap:8px; flex-wrap:wrap; max-width:75%; padding-top:calc(10px + env(safe-area-inset-top,0px)); padding-left:env(safe-area-inset-left,0px); }
+        #mobile-controls { position:absolute; bottom:calc(15px + env(safe-area-inset-bottom,0px)); left:calc(15px + env(safe-area-inset-left,0px)); pointer-events:auto; display:grid; grid-template-columns:60px 60px 60px; grid-template-rows:60px 60px; gap:4px; touch-action:none; }
+        .d-btn { width:60px; height:60px; background:rgba(255,255,255,0.25); border-radius:10px; border:2px solid rgba(255,255,255,0.4); touch-action:none; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.8); font-size:28px; }
+        .d-btn:active, .d-btn.held { background:rgba(255,255,255,0.5); }
         #btn-jump { grid-column:2; grid-row:1; }
         #btn-left { grid-column:1; grid-row:2; }
         #btn-right { grid-column:3; grid-row:2; }
-        #action-btn { position:absolute; bottom:25px; right:25px; width:80px; height:80px; background:rgba(255,200,0,0.45); border-radius:50%; border:3px solid white; pointer-events:auto; display:flex; justify-content:center; align-items:center; font-weight:bold; color:white; font-size:13px; user-select:none; }
+        #action-btn { position:absolute; bottom:calc(25px + env(safe-area-inset-bottom,0px)); right:calc(25px + env(safe-area-inset-right,0px)); width:80px; height:80px; background:rgba(255,200,0,0.45); border-radius:50%; border:3px solid white; pointer-events:auto; display:flex; justify-content:center; align-items:center; font-weight:bold; color:white; font-size:13px; user-select:none; touch-action:none; }
         #action-btn:active { background:rgba(255,200,0,0.8); }
-        .modal { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border:5px solid #4a4a4a; border-radius:15px; padding:20px; width:85%; max-width:400px; max-height:85vh; overflow-y:auto; text-align:center; display:none; pointer-events:auto; box-shadow:0 10px 50px rgba(0,0,0,0.5); z-index:100; }
+        .modal { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border:5px solid #4a4a4a; border-radius:15px; padding:20px; width:85%; max-width:400px; max-height:85vh; max-height:85dvh; overflow-y:auto; text-align:center; display:none; pointer-events:auto; box-shadow:0 10px 50px rgba(0,0,0,0.5); z-index:100; touch-action:pan-y; }
         .modal h2 { margin-top:0; color:#333; }
         .list-item { display:flex; justify-content:space-between; align-items:center; background:#eee; margin:8px 0; padding:10px; border-radius:8px; border:2px solid transparent; }
         .list-item.active { border:2px solid #27ae60; background:#d5f5e3; }
@@ -67,7 +67,17 @@
         .toggle-switch.on { background:#27ae60; }
         .toggle-switch::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; background:white; border-radius:50%; transition:0.2s; }
         .toggle-switch.on::after { left:27px; }
-        #enemy-count { position:absolute; bottom:15px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); color:white; padding:3px 12px; border-radius:10px; font-size:12px; pointer-events:none; }
+        #enemy-count { position:absolute; bottom:calc(15px + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); color:white; padding:3px 12px; border-radius:10px; font-size:12px; pointer-events:none; }
+        #rotate-overlay { display:none; position:absolute; inset:0; z-index:1000; background:rgba(26,26,46,0.94); color:#fff; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:28px; padding-bottom:calc(28px + env(safe-area-inset-bottom,0px)); pointer-events:auto; gap:12px; }
+        @media (orientation: portrait) and (max-width: 699px) {
+            #rotate-overlay { display:flex; }
+        }
+        #rotate-overlay .rotate-icon { font-size:56px; line-height:1; }
+        #rotate-overlay p { margin:0; font-size:22px; font-weight:bold; max-width:340px; line-height:1.35; }
+        #rotate-overlay .rotate-sub { font-size:15px; font-weight:normal; color:#c8d0e0; }
+        @media (hover:hover) and (pointer:fine) {
+            #mobile-controls { display:none; }
+        }
     </style>
 </head>
 <body>
@@ -95,6 +105,12 @@
     </div>
     <div id="action-btn">INTERACT</div>
     <div id="enemy-count"></div>
+</div>
+
+<div id="rotate-overlay" aria-hidden="true">
+    <div class="rotate-icon">🔄</div>
+    <p>Please rotate to landscape</p>
+    <p class="rotate-sub">Turn your phone sideways to play DentalCare Adventure.</p>
 </div>
 
 <!-- MODALS -->
@@ -262,6 +278,62 @@ const ctx = canvas.getContext('2d');
 let W, H;
 
 let keys = {};
+const MOVEMENT_KEYS = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','d','w','A','D','W',' ','Shift'];
+const controlPointers = new Map(); // pointerId -> { key, el }
+
+function getViewportSize() {
+    const vv = window.visualViewport;
+    if (vv && vv.width && vv.height) {
+        return { w: Math.max(1, Math.round(vv.width)), h: Math.max(1, Math.round(vv.height)) };
+    }
+    return {
+        w: window.innerWidth || document.documentElement.clientWidth || 1,
+        h: window.innerHeight || document.documentElement.clientHeight || 1
+    };
+}
+
+function isNarrowPortrait() {
+    const { w, h } = getViewportSize();
+    return h > w && w < 700;
+}
+
+function anyModalOpen() {
+    return Array.from(document.querySelectorAll('.modal')).some(m => m.style.display === 'block');
+}
+
+function isGameplayPaused() {
+    return anyModalOpen() || isNarrowPortrait();
+}
+
+function clearMovementKeys() {
+    MOVEMENT_KEYS.forEach(k => { keys[k] = false; });
+    controlPointers.forEach(({ el }) => {
+        if (el) el.classList.remove('held');
+    });
+    controlPointers.clear();
+}
+
+function updateRotateOverlay() {
+    const overlay = document.getElementById('rotate-overlay');
+    if (!overlay) return;
+    const show = isNarrowPortrait();
+    overlay.style.display = show ? 'flex' : 'none';
+    overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
+    if (show) clearMovementKeys();
+}
+
+function showModal(id) {
+    clearMovementKeys();
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'block';
+}
+
+window.closeModal = function(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+    clearMovementKeys();
+};
+
 let userData = {
     coins: parseInt(localStorage.getItem('dental_coins')) || 0,
     lastLogin: localStorage.getItem('dental_last_login') || null,
@@ -672,7 +744,7 @@ function unlockTeammateCheck() {
         document.getElementById('levelup-reward').innerHTML =
             `<p>🎉 New Teammate Unlocked: <b>${newUnlock.charAt(0).toUpperCase()+newUnlock.slice(1)}</b>!</p>` +
             `<div style="font-size:64px;">${getTeammateEmoji(newUnlock)}</div>`;
-        document.getElementById('levelup-modal').style.display = 'block';
+        showModal('levelup-modal');
         saveData();
         updateTeammates();
     }
@@ -952,8 +1024,7 @@ function loadNextQuestion() {
     }
     const qi = available[Math.floor(Math.random()*available.length)];
     const q = quizQuestions[qi];
-    const modal = document.getElementById('quiz-modal');
-    modal.style.display = 'block';
+    showModal('quiz-modal');
     const maxHP = currentEnemy.quizMaxHP;
     const questionNum = currentEnemy.quizAnswered.length + 1;
     document.getElementById('quiz-header').innerText = `🐛 Sugar Bug Battle! (${questionNum}/${maxHP})`;
@@ -1008,7 +1079,7 @@ function addXP(amount) {
         document.getElementById('levelup-text').innerText = rewardText;
         document.getElementById('levelup-reward').innerHTML = `<p>🎁 +${newLv*20} Coins bonus!</p>`;
         userData.coins += newLv * 20;
-        document.getElementById('levelup-modal').style.display = 'block';
+        showModal('levelup-modal');
         unlockTeammateCheck();
     }
     saveData();
@@ -1064,7 +1135,7 @@ function openShop() {
         `;
         list.appendChild(div);
     });
-    document.getElementById('shop-modal').style.display = 'block';
+    showModal('shop-modal');
 }
 
 window.buyItem = function(id,cost) {
@@ -1095,7 +1166,7 @@ window.openInventory = function() {
             list.appendChild(div);
         });
     }
-    document.getElementById('inventory-modal').style.display = 'block';
+    showModal('inventory-modal');
 };
 
 window.toggleItem = function(id) {
@@ -1130,7 +1201,7 @@ window.openTeam = function() {
         `;
         list.appendChild(div);
     });
-    document.getElementById('team-modal').style.display = 'block';
+    showModal('team-modal');
 };
 
 window.toggleTeammate = function(color) {
@@ -1146,7 +1217,7 @@ window.toggleTeammate = function(color) {
 window.openSettings = function() {
     const toggle = document.getElementById('pet-toggle');
     toggle.className = 'toggle-switch'+(userData.petEnabled?' on':'');
-    document.getElementById('settings-modal').style.display = 'block';
+    showModal('settings-modal');
 };
 
 window.togglePet = function() {
@@ -1182,7 +1253,7 @@ window.openCalendar = function() {
         dayDiv.innerHTML = isBrushed ? `${i}<span class="cal-brush">🦷</span>` : String(i);
         grid.appendChild(dayDiv);
     }
-    document.getElementById('calendar-modal').style.display = 'block';
+    showModal('calendar-modal');
 };
 
 // ==================== DAILY LOGIN ====================
@@ -1194,7 +1265,7 @@ function checkDailyLogin() {
         if (!userData.loginHistory.includes(today)) userData.loginHistory.push(today);
         addXP(30);
         saveData();
-        document.getElementById('login-modal').style.display = 'block';
+        showModal('login-modal');
         updateUI();
     }
 }
@@ -1287,7 +1358,7 @@ function showAwardCelebration(awards) {
     list.innerHTML = awards.map(a =>
         `<div class="award-unlock-item"><span class="award-icon">${a.icon}</span><div class="award-name">${a.name}</div></div>`
     ).join('');
-    document.getElementById('award-modal').style.display = 'block';
+    showModal('award-modal');
 }
 
 window.openCollection = function() {
@@ -1306,7 +1377,7 @@ window.openCollection = function() {
             : `<span class="award-icon">${def.icon}</span><div class="award-name">🔒 ${def.name}</div><div class="award-how">Locked · 未解鎖</div>`;
         grid.appendChild(slot);
     });
-    document.getElementById('collection-modal').style.display = 'block';
+    showModal('collection-modal');
 };
 
 // ==================== BRUSHING TIMER ====================
@@ -1321,7 +1392,7 @@ document.getElementById('brush-btn').addEventListener('click', () => {
             ? 'Already claimed today — practice anytime!'
             : 'Get your toothbrush ready...';
     }
-    document.getElementById('timer-modal').style.display = 'block';
+    showModal('timer-modal');
 });
 
 let brushSessionDone = false;
@@ -1377,12 +1448,10 @@ window.stopBrushing = function() {
     updateBrushStatusUI();
 };
 
-window.closeModal = function(id) {
-    document.getElementById(id).style.display = 'none';
-};
-
 // ==================== INTERACT ====================
 function interact() {
+    if (isGameplayPaused()) return;
+    clearMovementKeys();
     // Check shop collision
     if (player.x < shopDoor.x+shopDoor.w && player.x+player.w > shopDoor.x &&
         player.y < shopDoor.y+shopDoor.h && player.y+player.h > shopDoor.y) {
@@ -1397,7 +1466,7 @@ function interact() {
         }
     });
     // Default pet interaction
-    document.getElementById('interact-modal').style.display = 'block';
+    showModal('interact-modal');
 }
 
 // ==================== UI UPDATE ====================
@@ -1413,10 +1482,17 @@ function updateUI() {
 
 // ==================== RESIZE ====================
 function resize() {
-    const d = document.documentElement;
-    W = canvas.width = d.clientWidth || window.innerWidth;
-    H = canvas.height = d.clientHeight || window.innerHeight;
-    player.y = (GROUND_ROW-2)*TILE;
+    const { w, h } = getViewportSize();
+    const vv = window.visualViewport;
+    const ox = vv ? Math.round(vv.offsetLeft) : 0;
+    const oy = vv ? Math.round(vv.offsetTop) : 0;
+    W = canvas.width = w;
+    H = canvas.height = h;
+    document.body.style.width = w + 'px';
+    document.body.style.height = h + 'px';
+    document.body.style.left = ox + 'px';
+    document.body.style.top = oy + 'px';
+    updateRotateOverlay();
 }
 
 // ==================== DRAWING ====================
@@ -1668,15 +1744,16 @@ function draw() {
 }
 
 function gameLoop() {
-    update();
+    if (!isGameplayPaused()) update();
     draw();
     requestAnimationFrame(gameLoop);
 }
 
 // ==================== INIT ====================
 function startGame() {
-    window.addEventListener('resize', resize);
     resize();
+    player.x = 180;
+    player.y = (GROUND_ROW-2)*TILE;
     generateLevel();
     spawnDailyEnemies();
     updateTeammates();
@@ -1693,24 +1770,85 @@ function startGame() {
 }
 
 // ==================== INPUT ====================
-window.addEventListener('keydown', e => { keys[e.key]=true; if(e.key===' '||e.key==='ArrowUp'||e.key==='ArrowDown') e.preventDefault(); });
-window.addEventListener('keyup', e => keys[e.key]=false);
-window.addEventListener('keydown', e => { if(e.key==='e'||e.key==='E') { e.preventDefault(); interact(); } });
+window.addEventListener('keydown', e => {
+    if (e.key===' '||e.key==='ArrowUp'||e.key==='ArrowDown') e.preventDefault();
+    if (isGameplayPaused()) return;
+    keys[e.key] = true;
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+window.addEventListener('keydown', e => {
+    if (e.key==='e'||e.key==='E') {
+        e.preventDefault();
+        if (!isGameplayPaused()) interact();
+    }
+});
 
-// Mobile controls
+window.addEventListener('blur', clearMovementKeys);
+window.addEventListener('pointercancel', clearMovementKeys);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') clearMovementKeys();
+});
+window.addEventListener('pagehide', clearMovementKeys);
+
+function pointerInside(el, e) {
+    const r = el.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+}
+
+function bindHoldControl(el, key) {
+    const press = e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        e.preventDefault();
+        if (isGameplayPaused()) return;
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        controlPointers.set(e.pointerId, { key, el });
+        keys[key] = true;
+        el.classList.add('held');
+    };
+    const release = e => {
+        const held = controlPointers.get(e.pointerId);
+        if (!held || held.el !== el) return;
+        keys[held.key] = false;
+        el.classList.remove('held');
+        controlPointers.delete(e.pointerId);
+        if (el.hasPointerCapture && el.hasPointerCapture(e.pointerId)) {
+            try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+    };
+    el.addEventListener('pointerdown', press, { passive:false });
+    el.addEventListener('pointerup', release);
+    el.addEventListener('pointercancel', e => {
+        release(e);
+        clearMovementKeys();
+    });
+    el.addEventListener('lostpointercapture', release);
+    el.addEventListener('pointermove', e => {
+        if (!controlPointers.has(e.pointerId)) return;
+        if (pointerInside(el, e)) return;
+        release(e);
+    });
+}
+
 ['btn-jump','btn-left','btn-right'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const keyMap = { 'btn-jump':'ArrowUp', 'btn-left':'ArrowLeft', 'btn-right':'ArrowRight' };
-    el.addEventListener('touchstart', e=>{ e.preventDefault(); keys[keyMap[id]]=true; });
-    el.addEventListener('touchend', e=>{ e.preventDefault(); keys[keyMap[id]]=false; });
-    el.addEventListener('mousedown', e=>{ keys[keyMap[id]]=true; });
-    el.addEventListener('mouseup', e=>{ keys[keyMap[id]]=false; });
+    bindHoldControl(el, keyMap[id]);
 });
 
-document.getElementById('action-btn').addEventListener('click', interact);
-document.getElementById('action-btn').addEventListener('touchstart', e=>{ e.preventDefault(); interact(); });
+document.getElementById('action-btn').addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (isGameplayPaused()) return;
+    interact();
+}, { passive:false });
 
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', resize);
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resize);
+    window.visualViewport.addEventListener('scroll', resize);
+}
+resize();
 loadImages();
 </script>
 </body>
